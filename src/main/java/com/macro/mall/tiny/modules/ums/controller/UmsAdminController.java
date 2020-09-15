@@ -1,6 +1,7 @@
 package com.macro.mall.tiny.modules.ums.controller;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.lang.UUID;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.macro.mall.tiny.common.api.CommonPage;
 import com.macro.mall.tiny.common.api.CommonResult;
@@ -11,19 +12,27 @@ import com.macro.mall.tiny.modules.ums.model.UmsAdmin;
 import com.macro.mall.tiny.modules.ums.model.UmsRole;
 import com.macro.mall.tiny.modules.ums.service.UmsAdminService;
 import com.macro.mall.tiny.modules.ums.service.UmsRoleService;
+import com.macro.mall.tiny.security.kaptcha.VerifyCodeUtils;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.security.Principal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -33,6 +42,7 @@ import java.util.stream.Collectors;
 @Controller
 @Api(tags = "UmsAdminController", description = "后台用户管理")
 @RequestMapping("/admin")
+@Slf4j
 public class UmsAdminController {
     @Value("${jwt.tokenHeader}")
     private String tokenHeader;
@@ -42,6 +52,35 @@ public class UmsAdminController {
     private UmsAdminService adminService;
     @Autowired
     private UmsRoleService roleService;
+
+    @Autowired
+    private RedisTemplate redisTemplate;
+
+    @RequestMapping("/verifyCode.jpg")
+    @ApiOperation(value = "图片验证码")
+    public void verifyCode(HttpServletRequest request, HttpServletResponse response) throws IOException
+    {
+        /*禁止缓存*/
+        response.setDateHeader("Expires",0);
+        response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+        response.addHeader("Cache-Control", "post-check=0, pre-check=0");
+        response.setHeader("Pragma", "no-cache");
+        response.setContentType("image/jpeg");
+        /*获取验证码*/
+        String code = VerifyCodeUtils.generateVerifyCode(4);
+        /*验证码已key，value的形式缓存到redis 存放时间一分钟*/
+        log.info("验证码============>" + code);
+        String uuid = UUID.randomUUID().toString();
+        redisTemplate.opsForValue().set(uuid,code,1, TimeUnit.MINUTES);
+        Cookie cookie = new Cookie("captcha",uuid);
+        /*key写入cookie，验证时获取*/
+        response.addCookie(cookie);
+        ServletOutputStream outputStream = response.getOutputStream();
+        //ImageIO.write(bufferedImage,"jpg",outputStream);
+        VerifyCodeUtils.outputImage(110,40,outputStream,code);
+        outputStream.flush();
+        outputStream.close();
+    }
 
     @ApiOperation(value = "用户注册")
     @RequestMapping(value = "/register", method = RequestMethod.POST)
@@ -201,4 +240,6 @@ public class UmsAdminController {
         List<UmsRole> roleList = adminService.getRoleList(adminId);
         return CommonResult.success(roleList);
     }
+
+
 }

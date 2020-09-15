@@ -1,6 +1,9 @@
 package com.macro.mall.tiny.common.exception;
 
 import com.macro.mall.tiny.common.api.CommonResult;
+import com.macro.mall.tiny.security.kaptcha.ImageCodeException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindException;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
@@ -23,6 +26,21 @@ public class GlobalExceptionHandler {
             return CommonResult.failed(e.getErrorCode());
         }
         return CommonResult.failed(e.getMessage());
+    }
+
+    @ResponseBody
+    @ExceptionHandler(Exception.class)
+    public CommonResult exceptionHandler(Exception e)
+    {
+        String message = "系统出小差了，让网站管理员来处理吧 ಥ_ಥ";
+        return CommonResult.validateFailed(message);
+    }
+
+    @ResponseBody
+    @ExceptionHandler(ImageCodeException.class)
+    public CommonResult exceptionHandler(ImageCodeException e)
+    {
+        return CommonResult.validateFailed(e.getMessage());
     }
 
     @ResponseBody

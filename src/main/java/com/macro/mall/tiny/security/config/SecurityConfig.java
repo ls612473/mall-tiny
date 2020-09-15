@@ -2,6 +2,7 @@ package com.macro.mall.tiny.security.config;
 
 import com.macro.mall.security.util.JwtTokenUtil;
 import com.macro.mall.tiny.security.component.*;
+import com.macro.mall.tiny.security.kaptcha.ImageCodeFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.context.annotation.Bean;
@@ -27,6 +28,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     @Autowired(required = false)
     private DynamicSecurityService dynamicSecurityService;
 
+    @Autowired
+    private ImageCodeFilter imageCodeFilter;
+
     @Override
     protected void configure(HttpSecurity httpSecurity) throws Exception {
         ExpressionUrlAuthorizationConfigurer<HttpSecurity>.ExpressionInterceptUrlRegistry registry = httpSecurity
@@ -35,6 +39,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         for (String url : ignoreUrlsConfig().getUrls()) {
             registry.antMatchers(url).permitAll();
         }
+        /*图片验证码过滤器设置在密码验证之前*/
+     //   httpSecurity.addFilterBefore(imageCodeFilter, UsernamePasswordAuthenticationFilter.class);
+
         //允许跨域请求的OPTIONS请求
         registry.antMatchers(HttpMethod.OPTIONS)
                 .permitAll();
